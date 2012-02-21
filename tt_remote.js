@@ -1,6 +1,6 @@
 /**
 * Turntable Remote
-* Version: 0.1
+* Version: 0.11
 *
 * Author: Jonathon Munsell
 * TT DJ: Jonny Jump Up
@@ -49,8 +49,7 @@ var ttRemote = {
   // enables logging
   debug: false,
   // turntable object in the room scope that gives reference to local turntable js functions, variables, etc...
-  // TODO: This is very bad and not stable.  Need a better way of finding this object, but should work for now...
-  ttRoom: turntable.yRxfCrTt,
+  ttRoom: null,
   // turntable object in the user scope that gives reference to local turntable js functions, variables, etc...
   ttUser: null,
   // bop timer to delay call of bop
@@ -77,6 +76,20 @@ var ttRemote = {
     this.ttUser = eval(profileButton.attr("href").split(".")[0].replace("javascript:",""));
     // mouse out to return to original state
     $(someAvatar).mouseout();
+    
+    // parse the turntable object to try and find a reference to the room object.
+    // TODO: This isn't super reliable.  Need a better way of finding this object, but should work for now...
+    for (var prop in turntable) {
+      if (turntable.hasOwnProperty(prop)) {
+        var temp = turntable[prop];
+        if (temp && typeof temp == 'object') {
+          if (temp.roomId) {
+            this.ttRoom = temp;
+            break;
+          }
+        }
+      }
+    }
     
     this.currDj = this.ttRoom.currentDj;
     // this.currDj = ttUser.current_dj[0];
@@ -215,13 +228,12 @@ var ttRemote = {
   logObjs: function() {
     this.log('[logObjs]')
     // print TT's turntable object and ttUser to console for debug
-    this.log('turntable: ');
+    this.log('turntable:');
     this.log(turntable);
+    this.log('ttRoom:');
+    this.log(this.ttRoom);
     this.log('ttUser:');
     this.log(this.ttUser);
-    if (this.ttUser.current_dj) {
-      this.log("The current DJ is: " + this.getDjName(this.ttUser.current_dj[0]));
-    }
   }
 };
 
