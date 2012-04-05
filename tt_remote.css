@@ -1,0 +1,39 @@
+#tt-remote {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 1984;
+  text-align: center;
+  padding: 5px;
+  color: #ddd;
+  background-color: #333;
+  font-size: small;
+}
+#remote-main {
+  width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+}
+#tt-remote a {
+  color: #D9A343;
+  padding: 0 10px;
+}
+#tt-art {
+  float: left;
+}
+#tt-art img {
+  width: 75px;
+  height:75px;
+}
+#tt-song-info {
+  margin-left: 90px;
+}
+#tt-controls {
+  margin: 10px 0 0 90px;
+}
+#close-remote {
+  position: fixed;
+  bottom:70px;
+  right:10px;
+}
