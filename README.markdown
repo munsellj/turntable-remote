@@ -22,12 +22,16 @@ Cheers!
 * Mute song feature mutes a song if you don't like it but will return audio to the previously set
   volume when a new song starts.
   
-* Autobop.  
-  ** Can be turned on and off at any time. 
-  ** Options to vote Awesome for all songs or only songs played by DJs who you are a fan of.  
-  ** Vote is triggered on a delay so you have time to disable if someone plays a song you don't like
+* Autobop.
+
+  - Can be turned on and off at any time. 
+  
+  - Options to vote Awesome for all songs or only songs played by DJs who you are a fan of.
+  
+  - Vote is triggered on a delay so you have time to disable if someone plays a song you don't like
     but don't want to lame.
-  ** Vote is only cast once per song, so you can Lame after Awesome is triggered without Awesome vote
+    
+  - Vote is only cast once per song, so you can Lame after Awesome is triggered without Awesome vote
     automatically being sent again.
 
 * Close button "X" to close TT Remote at any time.

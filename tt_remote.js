@@ -165,7 +165,7 @@ var ttRemote = {
             vh: $.sha1(ttRemote.ttRoom.roomId + "up" + ttRemote.ttRoom.currentSong._id),
             th: $.sha1(Math.random() + ""),
             ph: $.sha1(Math.random() + "")
-          })
+          });
         }
       });
       if (ttRemote.bopTimer) {
