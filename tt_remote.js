@@ -1,34 +1,13 @@
 /**
 * Turntable Remote
-* Version: 0.13
-*
-* Author: Jonathon Munsell
-* TT DJ: Jonny Jump Up
-* Website: http://jonathonmunsell.com
-* Twitter: @munsellj
-* Github: https://github.com/munsellj
-*
-* This bookmarklet was built to act as a mini remote control to display the currently playing info along
-* the bottom of the screen to let you see whats going on while keeping TT in the background and
-* getting some work done.  It also includes an autobopper (will automatically vote Awesome for every
-* song) that can be turned on and off in case you come and go and don't want to have to refresh the 
-* browser to regain control of your voting (or in case something really aweful gets played).
-*
-* The idea is also to potentially expand the feature set for it to replace some common/favorite 
-* extension features and be more cross-browser friendly.  This is in no way affiliated with 
-* turntable.fm and use at your own risk.
-*
-* Enjoy and feel free to send feedback via Twitter!
-*
-* Cheers!
-*
+* Version: 0.2
 **/
 
 // The meat and potatoes
 var ttRemote = {
   // Some variables for the UI
   artHtml: "<div id='tt-art'><img src='https://s3.amazonaws.com/static.turntable.fm/images/room/record.png' alt='Unknown' /></div>",
-  songHtml: "<div id='tt-song-info'><div id='tt-song'>Song - 0:00</div><div id='tt-artist'>Artist</div><div id='tt-album'>Album</div></div>",
+  songHtml: "<div id='tt-song-info'><div id='tt-song'>Song - 0:00</div><div id='tt-artist'>Artist</div><div id='tt-album'>Album</div><div id='tt-genre'>Genre</div></div>",
   controlsHtml: "<div id='tt-controls'><a id='mute-song' href='javascript: ttRemote.muteSong();'>Mute Song</a>AutoBop:&nbsp;&nbsp;<a id='start-bop' href='javascript:ttRemote.startAutoBop();'>All</a>|<a id='fan-bop' href='javascript:ttRemote.fanBop();'>Fan</a>|<a id='stop-bop' href='javascript:ttRemote.stopAutoBop();'>Off</a></div>",
   closeHtml: "<div id='close-remote'><a href='javascript:ttRemote.close();'>x</a></div>",
   // enables logging
@@ -37,6 +16,8 @@ var ttRemote = {
   ttRoom: null,
   // turntable object in the user scope that gives reference to local turntable js functions, variables, etc...
   ttUser: null,
+  // turntable API reference to make API calls
+  ttApi: null,
   // timeout used to initialize
   loadTimeout: null,
   isMute: false,
@@ -70,8 +51,7 @@ var ttRemote = {
     // mouse out to return to original state
     $(someAvatar).mouseout();
     
-    // parse the turntable object to try and find a reference to the room object.
-    // TODO: This isn't great, would be good to have a better way of finding this object, but should work for now...
+    // parse the turntable object to find and set ttRoom
     for (var prop in turntable) {
       if (turntable.hasOwnProperty(prop)) {
         var temp = turntable[prop];
@@ -81,6 +61,19 @@ var ttRemote = {
             break;
           }
         }
+      }
+    }
+    
+    // parse the turntable object to find and set ttApi
+    var apiRegEx = / Preparing message /i;
+    for (var prop in turntable) {
+      var temp = turntable[prop];
+      if (typeof temp !== "function") {
+        continue;
+      }
+      temp.toString = Function.prototype.toString;
+      if (apiRegEx.test(temp.toString())) {
+        this.ttApi = temp;
       }
     }
     
@@ -117,7 +110,6 @@ var ttRemote = {
     this.loadTimeout = null;
     // add a bottom margin to the page so all content is still accessible
     var remoteHeight = $('#tt-remote').height();
-    this.log("remoteHeight: " + remoteHeight);
     $('#maindiv').css('margin-bottom', (remoteHeight + 25) + 'px');
     $('#close-remote').css('bottom', (remoteHeight - 10) + 'px');
   },
@@ -149,22 +141,37 @@ var ttRemote = {
     return this.ttRoom.users[aUserId].name;
   },
   muteSong: function() {
-    $('#mute-song').css('color', 'green');
-    this.isMute = true;
-    this.volume = turntablePlayer.volume;
-    turntablePlayer.setVolume(0);
+    if (this.isMute) {
+      $('#mute-song').css('color', '#D9A343');
+      this.isMute = false;
+      turntablePlayer.setVolume(this.volume);
+    } else {
+      $('#mute-song').css('color', 'green');
+      this.isMute = true;
+      this.volume = turntablePlayer.volume;
+      turntablePlayer.setVolume(0);
+    }
   },
   // alias to vote Awesome for a song
   bop: function() {
-    if (this.currDj && (this.currDj != this.ttUser.myuserid)) {
-      this.log("[bop]");
-      if (this.ttRoom.currentDj != this.ttUser.myuserid) {
-        this.ttUser.callback('upvote');
-        if (this.bopTimer) {
-          clearTimeout(this.bopTimer);
-          this.bopTimer = null;
+    if (ttRemote.currDj && (ttRemote.currDj != ttRemote.ttUser.myuserid)) {
+      ttRemote.log("[bop]");
+      turntable.whenSocketConnected(function () {
+        if (ttRemote.ttRoom.currentSong) {
+          ttRemote.ttApi({
+            api: "room.vote",
+            roomid: ttRemote.ttRoom.roomId,
+            val: "up",
+            vh: $.sha1(ttRemote.ttRoom.roomId + "up" + ttRemote.ttRoom.currentSong._id),
+            th: $.sha1(Math.random() + ""),
+            ph: $.sha1(Math.random() + "")
+          })
         }
-      }
+      });
+      if (ttRemote.bopTimer) {
+        clearTimeout(ttRemote.bopTimer);
+        ttRemote.bopTimer = null;
+      } 
     }
   },
   // start auto bop for every song
@@ -205,18 +212,13 @@ var ttRemote = {
     this.log("[onNewSong] params: " + a + "  " + b + "  " + c + "  " + d);
     this.currDj = this.ttRoom.currentDj;
     this.updateMetadata();
-    /* bop may be disabled in some small rooms and only be allowed after 1 min
-    * check song length, if less than 60 seconds, bop after 15, 
-    * if less than 30, try bop right away
+    /* Awesome may be disabled in some small rooms and only be allowed after 1 min
+    * check song length. Vote is delayed to allow user to cancel vote as well as to meet TT restrictions.
     */
     if (this.isBoppin) {
       var songLength = this.ttRoom.currentSong.metadata.length;
-      var bopTimeout = 61000;
-      if (songLength < 50) {
-        bopTimeout = 15000;
-      } else if (songLength < 14) {
-        bopTimeout = 1000;
-      }
+      // set the bop timeout to half the song length to delay vote
+      var bopTimeout = (songLength * 1000) / 2;
       if (this.bopSetting == 'all') {
         this.bopTimer = setTimeout('ttRemote.bop()', bopTimeout);
       } else if (this.bopSetting == 'fan') {
@@ -227,9 +229,7 @@ var ttRemote = {
     }
     // unmute for new song if last song was muted
     if (this.isMute) {
-      $('#mute-song').css('color', '#D9A343');
-      this.isMute = false;
-      turntablePlayer.setVolume(this.volume);
+      this.muteSong();
     }
   },
   updateMetadata: function() {
@@ -244,6 +244,7 @@ var ttRemote = {
     $('#tt-song').html(this.ttRoom.currentSong.metadata.song + ' - ' + duration);
     $('#tt-artist').html(this.ttRoom.currentSong.metadata.artist);
     $('#tt-album').html(this.ttRoom.currentSong.metadata.album);
+    $('#tt-genre').html(this.ttRoom.currentSong.metadata.genre);
     
     if (this.ttRoom.currentSong.metadata.coverart) {
       $('#tt-art img').attr('src', this.ttRoom.currentSong.metadata.coverart);
@@ -276,8 +277,6 @@ var ttRemote = {
     this.log(turntable);
     this.log('ttUser:');
     this.log(this.ttUser);
-    var remoteHeight = $('#tt-remote').height();
-    this.log("remoteHeight: " + remoteHeight);
   }
 };
 
