@@ -1,6 +1,6 @@
 /**
 * Turntable Remote
-* Version: 0.2
+* Version: 0.2.1
 **/
 
 // The meat and potatoes
@@ -46,8 +46,6 @@ var ttRemote = {
     $(someAvatar).mouseover();
     // get a reference to the blue user profile button
     var profileButton = $("a.blue");
-    // set ttUser by parsing and evaluating the JS set in the href of profileButton 
-    this.ttUser = eval(profileButton.attr("href").split(".")[0].replace("javascript:",""));
     // mouse out to return to original state
     $(someAvatar).mouseout();
     
@@ -58,6 +56,19 @@ var ttRemote = {
         if (temp && typeof temp == 'object') {
           if (temp.roomId) {
             this.ttRoom = temp;
+            break;
+          }
+        }
+      }
+    }
+    
+    // parse the ttRoom to find and set ttUser
+    for (var prop in this.ttRoom) {
+      if (this.ttRoom.hasOwnProperty(prop)) {
+        var temp = this.ttRoom[prop];
+        if (temp && typeof temp == 'object') {
+          if (temp.myuserid) {
+            this.ttUser = temp;
             break;
           }
         }
@@ -282,4 +293,3 @@ var ttRemote = {
 
 // init
 ttRemote.init();
-
